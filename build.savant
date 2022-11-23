@@ -1,0 +1,101 @@
+/*
+ * Copyright (c) 2014-2022, Inversoft Inc., All Rights Reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
+project(group: "org.savantbuild.plugin", name: "pom", version: "2.0.0-RC.4", licenses: ["Apache-2.0"]) {
+  workflow {
+    fetch {
+      cache()
+      url(url: "https://repository.savantbuild.org")
+    }
+    publish {
+      cache()
+    }
+  }
+
+  publishWorkflow {
+    subversion(repository: "https://svn.savantbuild.org")
+  }
+
+  dependencies {
+    group(name: "provided") {
+      dependency(id: "org.savantbuild:savant-core:2.0.0-RC.4")
+      dependency(id: "org.savantbuild:savant-dependency-management:2.0.0-RC.4")
+      dependency(id: "org.savantbuild:savant-io:2.0.0-RC.4")
+      dependency(id: "org.savantbuild:savant-utils:2.0.0-RC.4")
+      dependency(id: "org.savantbuild:savant-version:2.0.0-RC.4")
+    }
+    group(name: "test-compile", export: false) {
+      dependency(id: "org.testng:testng:6.8.7")
+    }
+  }
+
+  publications {
+    standard()
+  }
+}
+
+// Plugins
+dependency = loadPlugin(id: "org.savantbuild.plugin:dependency:2.0.0-RC.4")
+groovy = loadPlugin(id: "org.savantbuild.plugin:groovy:2.0.0-RC.4")
+groovyTestNG = loadPlugin(id: "org.savantbuild.plugin:groovy-testng:2.0.0-RC.4")
+idea = loadPlugin(id: "org.savantbuild.plugin:idea:2.0.0-RC.4")
+release = loadPlugin(id: "org.savantbuild.plugin:release-git:2.0.0-RC.4")
+
+// Plugin settings
+groovy.settings.groovyVersion = "4.0"
+groovy.settings.javaVersion = "1.8"
+groovy.settings.jarManifest["Savant-Plugin-Class"] = "org.savantbuild.plugin.dep.maven.POMPlugin"
+groovyTestNG.settings.groovyVersion = "4.0"
+groovyTestNG.settings.javaVersion = "1.8"
+idea.settings.imlFile = "pom-plugin.iml"
+idea.settings.moduleMap = [
+    "org.savantbuild:savant-core:2.0.0-RC.4"                  : "savant-core",
+    "org.savantbuild:savant-dependency-management:2.0.0-RC.4" : "savant-dependency-management",
+    "org.savantbuild:savant-io:2.0.0-RC.4"                    : "savant-io",
+    "org.savantbuild:savant-utils:2.0.0-RC.4"                 : "savant-utils",
+    "org.savantbuild:savant-version:2.0.0-RC.4"               : "savant-version"
+]
+
+target(name: "clean", description: "Cleans the project") {
+  groovy.clean()
+}
+
+target(name: "compile", description: "Compiles the project") {
+  groovy.compile()
+}
+
+target(name: "jar", description: "JARs the project", dependsOn: ["compile"]) {
+  groovy.jar()
+}
+
+target(name: "doc", description: "Generates the GroovyDoc", dependsOn: ["compile"]) {
+  groovy.document()
+}
+
+target(name: "test", description: "Runs the project's tests", dependsOn: ["jar"]) {
+  groovyTestNG.test()
+}
+
+target(name: "int", description: "Releases a local integration build of the project", dependsOn: ["test"]) {
+  dependency.integrate()
+}
+
+target(name: "release", description: "Releases a full version of the project", dependsOn: ["clean", "test"]) {
+  release.release()
+}
+
+target(name: "idea", description: "Updates the IntelliJ IDEA module file") {
+  idea.iml()
+}
