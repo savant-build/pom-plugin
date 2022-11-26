@@ -15,6 +15,11 @@
  */
 package org.savantbuild.plugin.dep.maven
 
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.Transformer
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -68,7 +73,7 @@ class POMPlugin extends BaseGroovyPlugin {
     Element root = document.documentElement
 
     // Remove the existing dependencies
-    use (DOMCategory) {
+    use(DOMCategory) {
       DOMCategory.setGlobalKeepIgnorableWhitespace(true)
 
       Element dependencies = root.dependencies.find()
@@ -84,80 +89,113 @@ class POMPlugin extends BaseGroovyPlugin {
 
       // Add the dependencies
       updatePOM(root)
+
+      // Call the closure if it exists
+      if (closure) {
+        closure.call(root)
+      }
+
+      // Write out the POM file
+      StringWriter writer = new StringWriter()
+      Transformer transformer = TransformerFactory.newInstance().newTransformer()
+      transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
+      transformer.setOutputProperty(OutputKeys.STANDALONE, "yes")
+      transformer.transform(new DOMSource(document), new StreamResult(writer))
+
+      String result = writer.toString()
+      output.debugln("New pom.xml is\n\n%s", result)
+      pomFile.toFile().write(result)
+
+      output.infoln("Update complete")
     }
-
-    // Call the closure if it exists
-    if (closure) {
-      closure.call(root)
-    }
-
-    // Write out the POM file
-    String result = root as String
-    result = result.replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-    output.debugln("New pom.xml is\n\n%s", result)
-    pomFile.toFile().write(result)
-
-    output.infoln("Update complete")
   }
 
   private void updatePOM(Element pom) {
     Element dependencies = pom.dependencies.find()
     if (dependencies == null) {
-      dependencies = pom.appendNode("dependencies")
+      dependencies = appendNode(pom, "dependencies", 2)
     }
 
     project.dependencies.groups.values().each { group ->
       group.dependencies.each { dep ->
-        Element dependency = dependencies.appendNode("dependency")
-        setElement(dependency, "groupId", dep.id.group)
-        setElement(dependency, "artifactId", dep.id.name)
-        setElement(dependency, "version", dep.version.toString())
-        setElement(dependency, "type", dep.id.type)
-
         def options = settings.groupToScope[group.name]
         if (options == null) {
           options = ["scope": group.name, "optional": group.name.endsWith("-optional")]
         }
 
-        setElement(dependency, "scope", options.scope)
-        setElement(dependency, "optional", (String) options.optional)
+        Element dependency = appendNode(dependencies, "dependency", 4)
+        setElement(dependency, "groupId", dep.id.group, 6)
+        setElement(dependency, "artifactId", dep.id.name, 6)
+        setElement(dependency, "version", dep.version.toString(), 6)
+        setElement(dependency, "type", dep.id.type, 6)
+        setElement(dependency, "scope", (String) options.scope, 6)
+        setElement(dependency, "optional", (String) options.optional, 6)
 
         if (dep.exclusions.size() > 0) {
-          Element exclusions = dependency.appendNode("exclusions")
+          Element exclusions = appendNode(dependency, "exclusions", 6)
           dep.exclusions.each { exclude ->
-            Element exclusion = exclusions.appendNode("exclusion")
-            setElement(exclusion, "groupId", exclude.group)
-            setElement(exclusion, "artifactId", exclude.name)
+            Element exclusion = appendNode(exclusions, "exclusion", 8)
+            setElement(exclusion, "groupId", exclude.group, 10)
+            setElement(exclusion, "artifactId", exclude.name, 10)
+            closeNode(exclusion, 8)
           }
+
+          closeNode(exclusions, 6)
         }
+
+        closeNode(dependency, 4)
       }
     }
 
+    closeNode(dependencies, 2)
+
     Element licenses = pom.licenses.find()
     if (licenses == null) {
-      licenses = pom.appendNode("licenses")
+      licenses = appendNode(pom, "licenses", 2)
     }
 
     project.licenses.each { lic ->
-      Element license = licenses.appendNode("license")
-      setElement(license, "name", lic.identifier)
-      setElement(license, "url", lic.seeAlso.size() > 0 ? lic.seeAlso.get(0) : null)
-      setElement(license, "distribution", "repo")
+      Element license = appendNode(licenses, "license", 4)
+      setElement(license, "name", lic.identifier, 6)
+      setElement(license, "url", lic.seeAlso.size() > 0 ? lic.seeAlso.get(0) : null, 6)
+      setElement(license, "distribution", "repo", 6)
+      closeNode(license, 4)
     }
 
-    setElement(pom, "groupId", project.group)
-    setElement(pom, "artifactId", project.name)
-    setElement(pom, "version", project.version.toString())
+    closeNode(licenses, 2)
+
+    setElement(pom, "groupId", project.group, 2)
+    setElement(pom, "artifactId", project.name, 2)
+    setElement(pom, "version", project.version.toString(), 2)
   }
 
-  private static void setElement(Element root, String nodeName, String value) {
+  private static Element appendNode(Element element, String name, int indent) {
+    StringBuilder build = new StringBuilder("\n")
+    for (int i = 0; i < indent; i++) {
+      build.append(" ")
+    }
+
+    element.appendChild(element.getOwnerDocument().createTextNode(build.toString()))
+    return element.appendNode(name)
+  }
+
+  private static void closeNode(Element element, int indent) {
+    StringBuilder build = new StringBuilder("\n")
+    for (int i = 0; i < indent; i++) {
+      build.append(" ")
+    }
+
+    element.appendChild(element.getOwnerDocument().createTextNode(build.toString()))
+  }
+
+  private static void setElement(Element root, String nodeName, String value, int indent) {
     if (value == null) {
       return
     }
 
     Element node = root.get(nodeName).find()
     if (node == null) {
-      node = root.appendNode(nodeName)
+      node = appendNode(root, nodeName, indent)
     }
     node.setValue(value)
   }
