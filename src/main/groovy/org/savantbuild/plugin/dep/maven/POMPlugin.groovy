@@ -93,7 +93,7 @@ class POMPlugin extends BaseGroovyPlugin {
 
     // Write out the POM file
     String result = root as String
-    result = result.replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "")
+    result = result.replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
     output.debugln("New pom.xml is\n\n%s", result)
     pomFile.toFile().write(result)
 
