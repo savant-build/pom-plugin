@@ -15,6 +15,7 @@
  */
 package org.savantbuild.plugin.dep.maven
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -22,9 +23,11 @@ import org.savantbuild.domain.Project
 import org.savantbuild.output.Output
 import org.savantbuild.plugin.groovy.BaseGroovyPlugin
 import org.savantbuild.runtime.RuntimeConfiguration
+import org.w3c.dom.Document
+import org.w3c.dom.Element
 
-import groovy.xml.XmlNodePrinter
-import groovy.xml.XmlParser
+import groovy.xml.DOMBuilder
+import groovy.xml.dom.DOMCategory
 
 /**
  * Maven POM plugin.
@@ -50,63 +53,62 @@ class POMPlugin extends BaseGroovyPlugin {
       fail("Maven pom.xml is not readable, writable, or is a directory (🤷)")
     }
 
-    Node root
+    String text
     if (Files.exists(pomFile)) {
       output.infoln("Updating the project pom.xml file")
-      root = new XmlParser().parse(pomFile.toFile())
+      byte[] bytes = Files.readAllBytes(pomFile)
+      text = new String(bytes, StandardCharsets.UTF_8)
     } else {
-      output.infoln("Updating the project pom.xml file")
-      root = new Node(null, "project",
-          [
-              "xmlns": "http://maven.apache.org/POM/4.0.0",
-              "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-              "xsi:schemaLocation": "http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
-          ]
-      )
+      output.infoln("Creating the project pom.xml file")
+      text = """<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+</project>"""
     }
+
+    Document document = DOMBuilder.newInstance().parseText(text)
+    Element root = document.documentElement
 
     // Remove the existing dependencies
-    Node dependencies = root.dependencies.find()
-    if (dependencies != null) {
-      dependencies.children().clear()
-    }
+    use (DOMCategory) {
+      DOMCategory.setGlobalKeepIgnorableWhitespace(true)
 
-    // Remove the existing licenses
-    Node licenses = root.licenses.find()
-    if (licenses != null) {
-      licenses.children().clear()
-    }
+      Element dependencies = root.dependencies.find()
+      if (dependencies != null) {
+        dependencies.children().each { dep -> dependencies.removeChild(dep) }
+      }
 
-    // Add the dependencies
-    updatePOM(root)
+      // Remove the existing licenses
+      Element licenses = root.licenses.find()
+      if (licenses != null) {
+        licenses.children().each { lic -> licenses.removeChild(lic) }
+      }
+
+      // Add the dependencies
+      updatePOM(root)
+    }
 
     // Call the closure if it exists
     if (closure) {
       closure.call(root)
     }
 
-    // Write out the .iml file
-    StringWriter writer = new StringWriter()
-    XmlNodePrinter printer = new XmlNodePrinter(new PrintWriter(writer), "  ")
-    printer.setPreserveWhitespace(true)
-    printer.print(root)
-
-    String result = writer.toString().trim()
+    // Write out the POM file
+    String result = root as String
+    result = result.replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "")
     output.debugln("New pom.xml is\n\n%s", result)
     pomFile.toFile().write(result)
 
     output.infoln("Update complete")
   }
 
-  private void updatePOM(Node pom) {
-    Node dependencies = pom.dependencies.find()
+  private void updatePOM(Element pom) {
+    Element dependencies = pom.dependencies.find()
     if (dependencies == null) {
       dependencies = pom.appendNode("dependencies")
     }
 
     project.dependencies.groups.values().each { group ->
       group.dependencies.each { dep ->
-        Node dependency = dependencies.appendNode("dependency")
+        Element dependency = dependencies.appendNode("dependency")
         setElement(dependency, "groupId", dep.id.group)
         setElement(dependency, "artifactId", dep.id.name)
         setElement(dependency, "version", dep.version.toString())
@@ -121,9 +123,9 @@ class POMPlugin extends BaseGroovyPlugin {
         setElement(dependency, "optional", (String) options.optional)
 
         if (dep.exclusions.size() > 0) {
-          Node exclusions = dependency.appendNode("exclusions")
+          Element exclusions = dependency.appendNode("exclusions")
           dep.exclusions.each { exclude ->
-            Node exclusion = exclusions.appendNode("exclusion")
+            Element exclusion = exclusions.appendNode("exclusion")
             setElement(exclusion, "groupId", exclude.group)
             setElement(exclusion, "artifactId", exclude.name)
           }
@@ -131,13 +133,13 @@ class POMPlugin extends BaseGroovyPlugin {
       }
     }
 
-    Node licenses = pom.licenses.find()
+    Element licenses = pom.licenses.find()
     if (licenses == null) {
       licenses = pom.appendNode("licenses")
     }
 
     project.licenses.each { lic ->
-      Node license = licenses.appendNode("license")
+      Element license = licenses.appendNode("license")
       setElement(license, "name", lic.identifier)
       setElement(license, "url", lic.seeAlso.size() > 0 ? lic.seeAlso.get(0) : null)
       setElement(license, "distribution", "repo")
@@ -148,12 +150,12 @@ class POMPlugin extends BaseGroovyPlugin {
     setElement(pom, "version", project.version.toString())
   }
 
-  private static void setElement(Node root, String nodeName, String value) {
+  private static void setElement(Element root, String nodeName, String value) {
     if (value == null) {
       return
     }
 
-    Node node = root.get(nodeName).find()
+    Element node = root.get(nodeName).find()
     if (node == null) {
       node = root.appendNode(nodeName)
     }

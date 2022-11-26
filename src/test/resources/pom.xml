@@ -1,3 +1,4 @@
+<!-- A comment at the top that is technically not valid XML and will be removed -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>Should be updated</groupId>
@@ -7,11 +8,15 @@
   <description>
     Not used
   </description>
+
+
   <url>https://savantbuild.org</url>
   <organization>
     <name>Not used</name>
     <url>https://savantbuild.org</url>
   </organization>
+
+  <!-- Licenses comment -->
   <licenses>
     <license>
       <name>Should be updated</name>
@@ -60,6 +65,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  <!-- Tight comment -->
   <dependencies>
     <dependency>
       <groupId>should-be-updated</groupId>
