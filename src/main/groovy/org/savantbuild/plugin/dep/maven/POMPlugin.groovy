@@ -157,7 +157,7 @@ class POMPlugin extends BaseGroovyPlugin {
     project.licenses.each { lic ->
       Element license = appendNode(licenses, "license", 4)
       setElement(license, "name", lic.identifier, 6)
-      setElement(license, "url", lic.seeAlso.size() > 0 ? lic.seeAlso.get(0) : null, 6)
+      setElement(license, "url", (lic.seeAlso != null && lic.seeAlso.size() > 0) ? lic.seeAlso.get(0) : null, 6)
       setElement(license, "distribution", "repo", 6)
       closeNode(license, 4)
     }
