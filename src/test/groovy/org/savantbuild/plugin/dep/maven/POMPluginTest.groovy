@@ -56,6 +56,8 @@ class POMPluginTest {
 
   Path cacheDir
 
+  Path integrationDir
+
   @BeforeSuite
   static void beforeSuite() {
     projectDir = Paths.get("../pom-plugin")
@@ -103,12 +105,14 @@ class POMPluginTest {
     )
 
     cacheDir = projectDir.resolve("../savant-dependency-management/test-deps/savant")
+    integrationDir = projectDir.resolve("../savant-dependency-management/test-deps/integration")
+
     project.workflow = new Workflow(
         new FetchWorkflow(output,
-            new CacheProcess(output, cacheDir.toString())
+            new CacheProcess(output, cacheDir.toString(), integrationDir.toString())
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cacheDir.toString())
+            new CacheProcess(output, cacheDir.toString(), integrationDir.toString())
         ),
         output
     )
