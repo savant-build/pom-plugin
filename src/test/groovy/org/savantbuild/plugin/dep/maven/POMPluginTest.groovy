@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class POMPluginTest {
     project = new Project(path, output)
     project.group = "org.savantbuild.test"
     project.name = "pom-plugin-test"
-    project.version = new Version("1.0")
+    project.version = new Version("1.0.0")
     project.licenses.add(License.parse("ApacheV2_0", null))
 
     project.dependencies = new Dependencies(
