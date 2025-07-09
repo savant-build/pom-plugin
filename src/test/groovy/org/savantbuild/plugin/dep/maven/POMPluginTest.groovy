@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +80,7 @@ class POMPluginTest {
 
     project.dependencies = new Dependencies(
         new DependencyGroup("compile", true,
+            new Artifact(new ArtifactID("org.apache.commons", "org.apache.commons", "notSemver", "jar"), new Version("1.0.0"), "1.0.Final", false, null),
             new Artifact("org.savantbuild.test:multiple-versions:1.0.0"),
             new Artifact("org.savantbuild.test:multiple-versions-different-dependencies:2.0.0"),
             new Artifact("org.savantbuild.test:exclusions:2.0.0", null, false, [
@@ -127,8 +128,8 @@ class POMPluginTest {
 
     plugin.update()
 
-    String actual = new String(Files.readAllBytes(pomFile))
-    String expected = new String(Files.readAllBytes(projectDir.resolve("src/test/resources/pom-expected.xml")))
+    String actual = new String(Files.readAllBytes(pomFile)).trim();
+    String expected = new String(Files.readAllBytes(projectDir.resolve("src/test/resources/pom-expected.xml"))).trim();
     assertEquals(actual, expected)
   }
 }

@@ -67,6 +67,14 @@
   <!-- Tight comment -->
   <dependencies>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>notSemver</artifactId>
+      <version>1.0.Final</version>
+      <type>jar</type>
+      <scope>compile</scope>
+      <optional>false</optional>
+    </dependency>
+    <dependency>
       <groupId>org.savantbuild.test</groupId>
       <artifactId>multiple-versions</artifactId>
       <version>1.0.0</version>

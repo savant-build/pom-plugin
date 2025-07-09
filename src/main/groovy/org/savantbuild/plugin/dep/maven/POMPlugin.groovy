@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,7 +126,11 @@ class POMPlugin extends BaseGroovyPlugin {
         Element dependency = appendNode(dependencies, "dependency", 4)
         setElement(dependency, "groupId", dep.id.group, 6)
         setElement(dependency, "artifactId", dep.id.name, 6)
-        setElement(dependency, "version", dep.version.toString(), 6)
+        // When we write out the pom.xml, we want to use the maven version if it is different
+        String version = dep.nonSemanticVersion != null
+            ? dep.nonSemanticVersion
+            : dep.version.toString();
+        setElement(dependency, "version", version, 6)
         setElement(dependency, "type", dep.id.type, 6)
         setElement(dependency, "scope", (String) options.scope, 6)
         setElement(dependency, "optional", (String) options.optional, 6)
